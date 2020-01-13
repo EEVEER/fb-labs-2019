@@ -117,51 +117,65 @@ namespace ConsoleApp1
             RSA_funcs.encrypt(ref msg, pub_exp_site, site_modulus);
             Console.WriteLine("Key = " + msg.ToString("x") + "\nSign = " + Sign.ToString("x"));
         }
-
-        static void generateKeyPair(int num, out BigInteger module, out BigInteger pub, out BigInteger priv)
+        static BigInteger nod(BigInteger n1, BigInteger m1)
         {
-            BigInteger[] ints = new BigInteger[2];
+            BigInteger n = n1;
+            BigInteger m = m1;
+            BigInteger p = n % m;
+            while (p != 0)
+            {
+                n = m;
+                m = p;
+                p = n % m;
+            }
+            return m;
+        }
+
+        static void get_prime(int num, ref BigInteger ints)
+        {
             Random rand = new Random();
             BigInteger odin = 1;
-            BigInteger max = 0;//BigInteger.Parse("115792089237316195423570985008687907853269984665640564039457584007913129639935");
+            BigInteger max = 0;
             for (int i = 0; i < num / 2; i++)
             {
                 max |= (odin << i);
             }
-            for (int i = 0; i < 2; i++)
+            ints |= (odin << 0);
+            for (int l = 2; l < num / 2 - 2; l++)
             {
-                ints[i] |= (odin << 0);
-                ints[i] |= (odin << 1);
-                for (int l = 2; l < num / 2 - 1; l++)
-                {
-                    if (rand.Next(0, 2) == 1)
-                        ints[i] |= (odin << l);
-                }
-                ints[i] |= (odin << num / 2 - 1);
-                while (ints[i] < max)
-                {
-                    if (ints[i] % 3 == 0 || ints[i] % 5 == 0 || ints[i] % 7 == 0 || ints[i] % 11 == 0 || ints[i] % 13 == 0)
-                    {
-                        ints[i] += 2;
-                        continue;
-                    }
-                    if (IsPrime(ints[i], odin, num / 2))
-                        break;
-                    ints[i] += 2;
-                }
-                if (ints[i] >= max)
-                    i--;
+                if (rand.Next(0, 2) == 1)
+                    ints |= (odin << l);
             }
-            module = ints[0] * ints[1];
-            pub = rand.Next(10000000, 100000000);
-            while (true)
+            ints |= (odin << num / 2 - 2);// перенес бит сюда
+            ints |= (odin << num / 2 - 1);
+            while (ints < max)
             {
-                if (pub % 3 == 0 || pub % 5 == 0 || pub % 7 == 0 || pub % 11 == 0 || pub % 13 == 0)
+                if (ints % 3 == 0 || ints % 5 == 0 || ints % 7 == 0 || ints % 11 == 0 || ints % 13 == 0)
                 {
-                    pub += 2;
+                    ints += 2;
                     continue;
                 }
-                if (IsPrime(pub, odin, 10))
+                if (IsPrime(ints, odin, num / 2))
+                    break;
+                ints += 2;
+            }
+            if (ints >= max)
+                get_prime(num, ref ints);
+        }
+
+            static void generateKeyPair(int num, out BigInteger module, out BigInteger pub, out BigInteger priv)
+        {
+            BigInteger[] ints = new BigInteger[2];
+            Random rand = new Random();
+            BigInteger odin = 1;
+            get_prime(num, ref ints[0]);
+            get_prime(num, ref ints[1]);
+            module = ints[0] * ints[1];
+            pub = rand.Next(100000, 1000000);
+            pub |= (odin << 0);// делаем pub непарным
+            while (true)
+            {
+                if (nod(pub, (ints[0] - 1) * (ints[1] - 1)) == 1)
                     break;
                 pub += 2;
             }
@@ -173,6 +187,18 @@ namespace ConsoleApp1
             int res = 0;
             Console.WriteLine("enter mode\n");
             res = Convert.ToInt32(Console.ReadLine());
+            BigInteger first = 0;
+            BigInteger second = 0;
+            BigInteger odin = 1;
+            first |= (odin << 0);
+            first |= (odin << 31);
+            first |= (odin << 30);
+            second |= (odin << 31);
+            second |= (odin << 0);
+            second |= (odin << 30);
+            Console.WriteLine(first);
+            Console.WriteLine(second);
+            Console.WriteLine(first * second);
             if (res == 1)
             {
                 BigInteger msg = BigInteger.Parse("0014403d4565eb012929d34aeff3", NumberStyles.AllowHexSpecifier);
@@ -189,7 +215,6 @@ namespace ConsoleApp1
             }
             else
             {
-                BigInteger odin = 1;
                 Random rand = new Random();
                 generateKeyPair(256, out BigInteger moduleA, out BigInteger pubA, out BigInteger privA);
                 generateKeyPair(256, out BigInteger moduleB, out BigInteger pubB, out BigInteger privB);
